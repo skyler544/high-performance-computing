@@ -218,14 +218,10 @@ int main(int argc, char** argv) {
     cl_kernel kernel = clCreateKernel(program, "vector_add", &status);
     checkStatus(status);
 
-    printf("Kernel created successfully\n");
     // set the kernel arguments
     checkStatus(clSetKernelArg(kernel, 0, sizeof(cl_mem), &bufferA));
-    printf("Kernel arg 1 set successfully\n");
     checkStatus(clSetKernelArg(kernel, 1, sizeof(cl_mem), &bufferB));
-    printf("Kernel arg 2 set successfully\n");
     checkStatus(clSetKernelArg(kernel, 2, sizeof(cl_mem), &numberOfElements));
-    printf("Kernel arg 2 set successfully\n");
 
     // DEVICE INFORMATION
     // ------------------------------------------------
