@@ -11,6 +11,8 @@
 #include <fstream>
 #include <string>
 
+// AUXILIARY FUNCTIONS
+// ----------------------------------------------------
 std::string cl_errorstring(cl_int err) {
     switch (err) {
         case CL_SUCCESS: return std::string("Success");
@@ -112,6 +114,8 @@ void printVector(int32_t* vector, unsigned int numberOfElements, const char* lab
 }
 
 int main(int argc, char** argv) {
+    // DATA SETUP
+    // ------------------------------------------------
     // input and output arrays
     const unsigned int numberOfElements = 10;
     size_t dataSize = numberOfElements * sizeof(int32_t);
@@ -125,6 +129,8 @@ int main(int argc, char** argv) {
         vectorB[i] = static_cast<int32_t>(i);
     }
 
+    // OPENCL PLATFORM AND DEVICE SETUP
+    // ------------------------------------------------
     // used for checking error status of api calls
     cl_int status;
 
@@ -163,6 +169,8 @@ int main(int argc, char** argv) {
     cl_device_id device;
     checkStatus(clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &device, NULL));
 
+    // OPENCL CONTEXT AND COMMAND QUEUE SETUP
+    // ------------------------------------------------
     // create context
     cl_context context = clCreateContext(NULL, 1, &device, NULL, NULL, &status);
     checkStatus(status);
@@ -185,6 +193,8 @@ int main(int argc, char** argv) {
     checkStatus(
         clEnqueueWriteBuffer(commandQueue, bufferB, CL_TRUE, 0, dataSize, vectorB, 0, NULL, NULL));
 
+    // OPENCL KERNEL SETUP
+    // ------------------------------------------------
     // read the kernel source
     const char* kernelFileName = "kernel.cl";
     std::ifstream ifs(kernelFileName);
@@ -219,6 +229,8 @@ int main(int argc, char** argv) {
     checkStatus(clSetKernelArg(kernel, 1, sizeof(cl_mem), &bufferB));
     checkStatus(clSetKernelArg(kernel, 2, sizeof(cl_mem), &bufferC));
 
+    // DEVICE INFORMATION
+    // ------------------------------------------------
     // output device capabilities
     size_t maxWorkGroupSize;
     checkStatus(clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(size_t),
@@ -239,6 +251,8 @@ int main(int argc, char** argv) {
     printf("\n");
     free(maxWorkItemSizes);
 
+    // RUN PROGRAM
+    // ------------------------------------------------
     // execute the kernel
     // ndrange capabilites only need to be checked when we specify a local work
     // group size manually in our case we provide NULL as local work group size,
@@ -256,6 +270,8 @@ int main(int argc, char** argv) {
     printVector(vectorB, numberOfElements, "Input B");
     printVector(vectorC, numberOfElements, "Output C");
 
+    // CLEANUP
+    // ------------------------------------------------
     // release allocated resources
     free(vectorC);
     free(vectorB);
