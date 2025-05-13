@@ -122,11 +122,9 @@ int main(int argc, char** argv) {
     // malloc returns a void * so we cast it to int32_t *
     int32_t* vectorA = static_cast<int32_t*>(malloc(dataSize));
     int32_t* vectorB = static_cast<int32_t*>(malloc(dataSize));
-    int32_t* vectorC = static_cast<int32_t*>(malloc(dataSize));
 
     for (unsigned int i = 0; i < numberOfElements; ++i) {
         vectorA[i] = static_cast<int32_t>(i);
-        vectorB[i] = static_cast<int32_t>(i);
     }
 
     // OPENCL PLATFORM AND DEVICE SETUP
@@ -184,14 +182,10 @@ int main(int argc, char** argv) {
     checkStatus(status);
     cl_mem bufferB = clCreateBuffer(context, CL_MEM_READ_ONLY, dataSize, NULL, &status);
     checkStatus(status);
-    cl_mem bufferC = clCreateBuffer(context, CL_MEM_WRITE_ONLY, dataSize, NULL, &status);
-    checkStatus(status);
 
     // write data from the input vectors to the buffers
     checkStatus(
         clEnqueueWriteBuffer(commandQueue, bufferA, CL_TRUE, 0, dataSize, vectorA, 0, NULL, NULL));
-    checkStatus(
-        clEnqueueWriteBuffer(commandQueue, bufferB, CL_TRUE, 0, dataSize, vectorB, 0, NULL, NULL));
 
     // OPENCL KERNEL SETUP
     // ------------------------------------------------
@@ -224,10 +218,14 @@ int main(int argc, char** argv) {
     cl_kernel kernel = clCreateKernel(program, "vector_add", &status);
     checkStatus(status);
 
+    printf("Kernel created successfully\n");
     // set the kernel arguments
     checkStatus(clSetKernelArg(kernel, 0, sizeof(cl_mem), &bufferA));
+    printf("Kernel arg 1 set successfully\n");
     checkStatus(clSetKernelArg(kernel, 1, sizeof(cl_mem), &bufferB));
-    checkStatus(clSetKernelArg(kernel, 2, sizeof(cl_mem), &bufferC));
+    printf("Kernel arg 2 set successfully\n");
+    checkStatus(clSetKernelArg(kernel, 2, sizeof(cl_mem), &numberOfElements));
+    printf("Kernel arg 2 set successfully\n");
 
     // DEVICE INFORMATION
     // ------------------------------------------------
@@ -263,24 +261,21 @@ int main(int argc, char** argv) {
 
     // read the device output buffer to the host output array
     checkStatus(
-        clEnqueueReadBuffer(commandQueue, bufferC, CL_TRUE, 0, dataSize, vectorC, 0, NULL, NULL));
+        clEnqueueReadBuffer(commandQueue, bufferB, CL_TRUE, 0, dataSize, vectorB, 0, NULL, NULL));
 
     // output result
     printVector(vectorA, numberOfElements, "Input A");
-    printVector(vectorB, numberOfElements, "Input B");
-    printVector(vectorC, numberOfElements, "Output C");
+    printVector(vectorB, numberOfElements, "Output B");
 
     // CLEANUP
     // ------------------------------------------------
     // release allocated resources
-    free(vectorC);
     free(vectorB);
     free(vectorA);
 
     // release opencl objects
     checkStatus(clReleaseKernel(kernel));
     checkStatus(clReleaseProgram(program));
-    checkStatus(clReleaseMemObject(bufferC));
     checkStatus(clReleaseMemObject(bufferB));
     checkStatus(clReleaseMemObject(bufferA));
     checkStatus(clReleaseCommandQueue(commandQueue));
