@@ -183,14 +183,14 @@ int main(int argc, char** argv) {
         exit(EXIT_FAILURE);
     }
 
-    std::string programSource((std::istreambuf_iterator<char>(ifs)),
-                              std::istreambuf_iterator<char>());
-    const char* programSourceArray = programSource.c_str();
-    size_t programSize = programSource.length();
+    std::string kernelSource((std::istreambuf_iterator<char>(ifs)),
+                             std::istreambuf_iterator<char>());
+    const char* kernelSourceArray = kernelSource.c_str();
+    size_t programSize = kernelSource.length();
 
     // create the program
     cl_program program = clCreateProgramWithSource(
-        context, 1, static_cast<const char**>(&programSourceArray), &programSize, &status);
+        context, 1, static_cast<const char**>(&kernelSourceArray), &programSize, &status);
     checkStatus(status);
 
     // build the program
