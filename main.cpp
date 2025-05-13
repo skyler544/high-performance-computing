@@ -101,10 +101,10 @@ void printCompilerError(cl_program program, cl_device_id device) {
     printf("Build Error: %s\n", log);
 }
 
-void printVector(int32_t* vector, unsigned int elementSize, const char* label) {
+void printVector(int32_t* vector, unsigned int numberOfElements, const char* label) {
     printf("%s:\n", label);
 
-    for (unsigned int i = 0; i < elementSize; ++i) {
+    for (unsigned int i = 0; i < numberOfElements; ++i) {
         printf("%d ", vector[i]);
     }
 
@@ -113,13 +113,13 @@ void printVector(int32_t* vector, unsigned int elementSize, const char* label) {
 
 int main(int argc, char** argv) {
     // input and output arrays
-    const unsigned int elementSize = 10;
-    size_t dataSize = elementSize * sizeof(int32_t);
+    const unsigned int numberOfElements = 10;
+    size_t dataSize = numberOfElements * sizeof(int32_t);
     int32_t* vectorA = static_cast<int32_t*>(malloc(dataSize));
     int32_t* vectorB = static_cast<int32_t*>(malloc(dataSize));
     int32_t* vectorC = static_cast<int32_t*>(malloc(dataSize));
 
-    for (unsigned int i = 0; i < elementSize; ++i) {
+    for (unsigned int i = 0; i < numberOfElements; ++i) {
         vectorA[i] = static_cast<int32_t>(i);
         vectorB[i] = static_cast<int32_t>(i);
     }
@@ -233,7 +233,7 @@ int main(int argc, char** argv) {
     // ndrange capabilites only need to be checked when we specify a local work
     // group size manually in our case we provide NULL as local work group size,
     // which means groups get formed automatically
-    size_t globalWorkSize = static_cast<size_t>(elementSize);
+    size_t globalWorkSize = static_cast<size_t>(numberOfElements);
     checkStatus(clEnqueueNDRangeKernel(commandQueue, kernel, 1, NULL, &globalWorkSize, NULL, 0,
                                        NULL, NULL));
 
@@ -242,9 +242,9 @@ int main(int argc, char** argv) {
         clEnqueueReadBuffer(commandQueue, bufferC, CL_TRUE, 0, dataSize, vectorC, 0, NULL, NULL));
 
     // output result
-    printVector(vectorA, elementSize, "Input A");
-    printVector(vectorB, elementSize, "Input B");
-    printVector(vectorC, elementSize, "Output C");
+    printVector(vectorA, numberOfElements, "Input A");
+    printVector(vectorB, numberOfElements, "Input B");
+    printVector(vectorC, numberOfElements, "Output C");
 
     // release allocated resources
     free(vectorC);
