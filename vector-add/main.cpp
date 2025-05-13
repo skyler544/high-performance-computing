@@ -180,7 +180,7 @@ int main(int argc, char** argv) {
     // allocate two input and one output buffer for the three vectors
     cl_mem bufferA = clCreateBuffer(context, CL_MEM_READ_ONLY, dataSize, NULL, &status);
     checkStatus(status);
-    cl_mem bufferB = clCreateBuffer(context, CL_MEM_READ_ONLY, dataSize, NULL, &status);
+    cl_mem bufferB = clCreateBuffer(context, CL_MEM_WRITE_ONLY, dataSize, NULL, &status);
     checkStatus(status);
 
     // write data from the input vectors to the buffers
@@ -221,7 +221,7 @@ int main(int argc, char** argv) {
     // set the kernel arguments
     checkStatus(clSetKernelArg(kernel, 0, sizeof(cl_mem), &bufferA));
     checkStatus(clSetKernelArg(kernel, 1, sizeof(cl_mem), &bufferB));
-    checkStatus(clSetKernelArg(kernel, 2, sizeof(cl_mem), &numberOfElements));
+    checkStatus(clSetKernelArg(kernel, 2, sizeof(cl_int), &numberOfElements));
 
     // DEVICE INFORMATION
     // ------------------------------------------------
