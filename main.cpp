@@ -115,6 +115,7 @@ int main(int argc, char** argv) {
     // input and output arrays
     const unsigned int numberOfElements = 10;
     size_t dataSize = numberOfElements * sizeof(int32_t);
+    // malloc returns a void * so we cast it to int32_t *
     int32_t* vectorA = static_cast<int32_t*>(malloc(dataSize));
     int32_t* vectorB = static_cast<int32_t*>(malloc(dataSize));
     int32_t* vectorC = static_cast<int32_t*>(malloc(dataSize));
@@ -127,6 +128,10 @@ int main(int argc, char** argv) {
     // used for checking error status of api calls
     cl_int status;
 
+    // the first call to clGetPlatformIDs is used to check if we have any
+    // platforms at all. the second call is used to retrieve the platform
+    // itself. why is this not two different functions?
+
     // retrieve the number of platforms
     cl_uint numPlatforms = 0;
     checkStatus(clGetPlatformIDs(0, NULL, &numPlatforms));
@@ -136,11 +141,16 @@ int main(int argc, char** argv) {
         exit(EXIT_FAILURE);
     }
 
-    // select the platform
+    // select the FIRST platform
+    // we pass our platform by reference so that it can be mutated?! why is this
+    // not a function that just returns the platform so we can set it directly
+    // like any normal person would do?
+    // cl_platform_id platform = clGetPlatform(1); // so easy!
     cl_platform_id platform;
     checkStatus(clGetPlatformIDs(1, &platform, NULL));
 
     // retrieve the number of devices
+    // same thing here with clGetDeviceIDs
     cl_uint numDevices = 0;
     checkStatus(clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 0, NULL, &numDevices));
 
