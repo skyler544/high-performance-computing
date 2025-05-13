@@ -117,7 +117,7 @@ int main(int argc, char** argv) {
     // DATA SETUP
     // ------------------------------------------------
     // input and output arrays
-    const unsigned int numberOfElements = 10;
+    const cl_uint numberOfElements = 10;
     size_t dataSize = numberOfElements * sizeof(int32_t);
     // malloc returns a void * so we cast it to int32_t *
     int32_t* vectorA = static_cast<int32_t*>(malloc(dataSize));
@@ -221,7 +221,7 @@ int main(int argc, char** argv) {
     // set the kernel arguments
     checkStatus(clSetKernelArg(kernel, 0, sizeof(cl_mem), &bufferA));
     checkStatus(clSetKernelArg(kernel, 1, sizeof(cl_mem), &bufferB));
-    checkStatus(clSetKernelArg(kernel, 2, sizeof(cl_int), &numberOfElements));
+    checkStatus(clSetKernelArg(kernel, 2, sizeof(cl_uint), &numberOfElements));
 
     // DEVICE INFORMATION
     // ------------------------------------------------
