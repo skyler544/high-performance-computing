@@ -2,7 +2,7 @@ CC = g++
 OPENCL = -D CL_TARGET_OPENCL_VERSION=120
 LINK = -lOpenCL
 TARGET = vector-add
-SRCS = main.cpp
+SRCS = main.cpp cl_utils.cpp
 
 all: $(TARGET)
 
