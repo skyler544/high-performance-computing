@@ -110,3 +110,24 @@ void printVector(int32_t* vector, unsigned int numberOfElements, const char* lab
 
     printf("\n");
 }
+
+void outputDeviceStatistics(cl_device_id device) {
+    size_t maxWorkGroupSize;
+    checkStatus(clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(size_t),
+                                &maxWorkGroupSize, NULL));
+    printf("Device Capabilities: Max work items in single group: %zu\n", maxWorkGroupSize);
+
+    cl_uint maxWorkItemDimensions;
+    checkStatus(clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, sizeof(cl_uint),
+                                &maxWorkItemDimensions, NULL));
+    printf("Device Capabilities: Max work item dimensions: %u\n", maxWorkItemDimensions);
+
+    size_t* maxWorkItemSizes = static_cast<size_t*>(malloc(maxWorkItemDimensions * sizeof(size_t)));
+    checkStatus(clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_SIZES,
+                                maxWorkItemDimensions * sizeof(size_t), maxWorkItemSizes, NULL));
+    printf("Device Capabilities: Max work items in group per dimension:");
+    for (cl_uint i = 0; i < maxWorkItemDimensions; ++i)
+        printf(" %u:%zu", i, maxWorkItemSizes[i]);
+    printf("\n");
+    free(maxWorkItemSizes);
+}

@@ -12,30 +12,9 @@
 #include <string>
 #include "cl_utils.hpp"
 
-int main(int argc, char** argv) {
-    // DATA SETUP
-    // ------------------------------------------------
-    // input and output arrays
-    const cl_uint numberOfElements = 10;
-    size_t dataSize = numberOfElements * sizeof(int32_t);
-    // malloc returns a void * so we cast it to int32_t *
-    int32_t* vectorA = static_cast<int32_t*>(malloc(dataSize));
-    int32_t* vectorB = static_cast<int32_t*>(malloc(dataSize));
-
-    for (unsigned int i = 0; i < numberOfElements; ++i) {
-        vectorA[i] = static_cast<int32_t>(i);
-    }
-
-    // OPENCL PLATFORM AND DEVICE SETUP
-    // ------------------------------------------------
-    // used for checking error status of api calls
+cl_device_id getDevice() {
     cl_int status;
 
-    // the first call to clGetPlatformIDs is used to check if we have any
-    // platforms at all. the second call is used to retrieve the platform
-    // itself. why is this not two different functions?
-
-    // retrieve the number of platforms
     cl_uint numPlatforms = 0;
     checkStatus(clGetPlatformIDs(0, NULL, &numPlatforms));
 
@@ -44,16 +23,9 @@ int main(int argc, char** argv) {
         exit(EXIT_FAILURE);
     }
 
-    // select the FIRST platform
-    // we pass our platform by reference so that it can be mutated?! why is this
-    // not a function that just returns the platform so we can set it directly
-    // like any normal person would do?
-    // cl_platform_id platform = clGetPlatform(1); // so easy!
     cl_platform_id platform;
     checkStatus(clGetPlatformIDs(1, &platform, NULL));
 
-    // retrieve the number of devices
-    // same thing here with clGetDeviceIDs
     cl_uint numDevices = 0;
     checkStatus(clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 0, NULL, &numDevices));
 
@@ -62,32 +34,47 @@ int main(int argc, char** argv) {
         exit(EXIT_FAILURE);
     }
 
-    // select the device
     cl_device_id device;
     checkStatus(clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &device, NULL));
 
-    // OPENCL CONTEXT AND COMMAND QUEUE SETUP
-    // ------------------------------------------------
-    // create context
+    return device;
+}
+
+cl_context getContext(cl_device_id device) {
+    cl_int status;
     cl_context context = clCreateContext(NULL, 1, &device, NULL, NULL, &status);
     checkStatus(status);
 
-    // create command queue
+    return context;
+}
+
+cl_command_queue getCommandQueue(cl_context context, cl_device_id device) {
+    cl_int status;
     cl_command_queue commandQueue = clCreateCommandQueue(context, device, 0, &status);
     checkStatus(status);
 
-    // allocate two input and one output buffer for the three vectors
-    cl_mem bufferA = clCreateBuffer(context, CL_MEM_READ_ONLY, dataSize, NULL, &status);
-    checkStatus(status);
-    cl_mem bufferB = clCreateBuffer(context, CL_MEM_WRITE_ONLY, dataSize, NULL, &status);
+    return commandQueue;
+}
+
+cl_mem allocateBuffer(cl_context context, size_t dataSize, cl_mem_flags flag) {
+    cl_int status;
+    cl_mem buffer = clCreateBuffer(context, flag, dataSize, NULL, &status);
     checkStatus(status);
 
-    // write data from the input vectors to the buffers
+    return buffer;
+}
+
+void enqueueWriteBuffer(cl_command_queue commandQueue,
+                        cl_mem buffer,
+                        size_t dataSize,
+                        const void* data) {
     checkStatus(
-        clEnqueueWriteBuffer(commandQueue, bufferA, CL_TRUE, 0, dataSize, vectorA, 0, NULL, NULL));
+        clEnqueueWriteBuffer(commandQueue, buffer, CL_TRUE, 0, dataSize, data, 0, NULL, NULL));
+}
 
-    // OPENCL KERNEL SETUP
-    // ------------------------------------------------
+cl_program initializeProgram(cl_context context, cl_device_id device) {
+    cl_int status;
+
     // read the kernel source
     const char* kernelFileName = "kernel.cl";
     std::ifstream ifs(kernelFileName);
@@ -113,52 +100,66 @@ int main(int argc, char** argv) {
         exit(EXIT_FAILURE);
     }
 
-    // create the vector addition kernel
+    return program;
+}
+
+cl_kernel vectorAddKernel(cl_program program,
+                          cl_mem bufferA,
+                          cl_mem bufferB,
+                          cl_uint numberOfElements) {
+    cl_int status;
     cl_kernel kernel = clCreateKernel(program, "vector_add", &status);
     checkStatus(status);
 
-    // set the kernel arguments
     checkStatus(clSetKernelArg(kernel, 0, sizeof(cl_mem), &bufferA));
     checkStatus(clSetKernelArg(kernel, 1, sizeof(cl_mem), &bufferB));
     checkStatus(clSetKernelArg(kernel, 2, sizeof(cl_uint), &numberOfElements));
 
-    // DEVICE INFORMATION
-    // ------------------------------------------------
-    // output device capabilities
-    size_t maxWorkGroupSize;
-    checkStatus(clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(size_t),
-                                &maxWorkGroupSize, NULL));
-    printf("Device Capabilities: Max work items in single group: %zu\n", maxWorkGroupSize);
+    return kernel;
+}
 
-    cl_uint maxWorkItemDimensions;
-    checkStatus(clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, sizeof(cl_uint),
-                                &maxWorkItemDimensions, NULL));
-    printf("Device Capabilities: Max work item dimensions: %u\n", maxWorkItemDimensions);
-
-    size_t* maxWorkItemSizes = static_cast<size_t*>(malloc(maxWorkItemDimensions * sizeof(size_t)));
-    checkStatus(clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_SIZES,
-                                maxWorkItemDimensions * sizeof(size_t), maxWorkItemSizes, NULL));
-    printf("Device Capabilities: Max work items in group per dimension:");
-    for (cl_uint i = 0; i < maxWorkItemDimensions; ++i)
-        printf(" %u:%zu", i, maxWorkItemSizes[i]);
-    printf("\n");
-    free(maxWorkItemSizes);
-
-    // RUN PROGRAM
-    // ------------------------------------------------
-    // execute the kernel
-    // ndrange capabilites only need to be checked when we specify a local work
-    // group size manually in our case we provide NULL as local work group size,
-    // which means groups get formed automatically
+void enqueueKernel(cl_command_queue commandQueue, cl_kernel kernel, cl_uint numberOfElements) {
     size_t globalWorkSize = static_cast<size_t>(numberOfElements);
     checkStatus(clEnqueueNDRangeKernel(commandQueue, kernel, 1, NULL, &globalWorkSize, NULL, 0,
                                        NULL, NULL));
+}
 
-    // read the device output buffer to the host output array
+void enqueueReadBuffer(cl_command_queue commandQueue, cl_mem buffer, size_t dataSize, void* data) {
     checkStatus(
-        clEnqueueReadBuffer(commandQueue, bufferB, CL_TRUE, 0, dataSize, vectorB, 0, NULL, NULL));
+        clEnqueueReadBuffer(commandQueue, buffer, CL_TRUE, 0, dataSize, data, 0, NULL, NULL));
+}
 
-    // output result
+int main(int argc, char** argv) {
+    // DATA SETUP
+    // ------------------------------------------------
+    // input and output arrays
+    const cl_uint numberOfElements = 10;
+    size_t dataSize = numberOfElements * sizeof(int32_t);
+    // malloc returns a void * so we cast it to int32_t *
+    int32_t* vectorA = static_cast<int32_t*>(malloc(dataSize));
+    int32_t* vectorB = static_cast<int32_t*>(malloc(dataSize));
+
+    for (unsigned int i = 0; i < numberOfElements; ++i) {
+        vectorA[i] = static_cast<int32_t>(i);
+    }
+
+    // OPENCL SETUP
+    // ------------------------------------------------
+    cl_device_id device = getDevice();
+    cl_context context = getContext(device);
+    cl_command_queue commandQueue = getCommandQueue(context, device);
+
+    cl_mem bufferA = allocateBuffer(context, dataSize, CL_MEM_READ_ONLY);
+    cl_mem bufferB = allocateBuffer(context, dataSize, CL_MEM_WRITE_ONLY);
+    enqueueWriteBuffer(commandQueue, bufferA, dataSize, vectorA);
+
+    cl_program program = initializeProgram(context, device);
+    cl_kernel kernel = vectorAddKernel(program, bufferA, bufferB, numberOfElements);
+
+    // RUN PROGRAM
+    // ------------------------------------------------
+    enqueueKernel(commandQueue, kernel, numberOfElements);
+    enqueueReadBuffer(commandQueue, bufferB, dataSize, vectorB);
     printVector(vectorA, numberOfElements, "Input A");
     printVector(vectorB, numberOfElements, "Output B");
 
